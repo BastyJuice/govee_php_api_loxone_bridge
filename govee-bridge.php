@@ -2,7 +2,7 @@
 // === Konfiguration ===
 $apiKey = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX";
 $RemoteExecute = false;       // false = nur lokale IPs erlaubt, true = remote erlaubt
-$ColorIntIsBGR = false;       // false = RGB (Standard), true = BGR (z.B. DMX/Loxone)
+$ColorIntIsBGR = false;       // false = RGB (Standard), true = BGR (z.B. DMX)
 
 // === Zugriffsbeschränkung ===
 $clientIP = $_SERVER['REMOTE_ADDR'];
@@ -42,6 +42,11 @@ $statusOnly  = $_GET['status'] ?? null;
 $listDevices = $_GET['devices'] ?? null;
 $allOn       = $_GET['allon'] ?? null;
 $allOff      = $_GET['alloff'] ?? null;
+
+// === MAC formatieren falls nötig ===
+if ($device && !str_contains($device, ":")) {
+    $device = strtoupper(implode(":", str_split($device, 2)));
+}
 
 // === Ergebnis vorbereiten ===
 $results = [];
@@ -98,9 +103,9 @@ function goveeDevices($apiKey) {
 }
 
 function loxoneToRGB($value) {
-    $r = (int)(((($value - floor($value / 1000 + 0.5) * 1000)) * 2.55) + 0.5);
-    $g = (int)((((floor($value / 1000 + 0.5) - floor($value / 1000000 + 0.5)) * 2.55)) + 0.5);
-    $b = (int)((floor($value / 1000000 + 0.5) * 2.55) + 0.5);
+    $r = (int)((($value - (int)($value / 1000 + 0.5) * 1000) * 2.55) + 0.5);
+    $g = (int)(((int)($value / 1000 + 0.5) - (int)($value / 1000000 + 0.5) * 1000) * 2.55 + 0.5);
+    $b = (int)(((int)($value / 1000000 + 0.5)) * 2.55 + 0.5);
     return ["r" => $r, "g" => $g, "b" => $b];
 }
 
@@ -168,7 +173,6 @@ if ($device && $model) {
                 "response" => goveeControl($apiKey, $device, $model, "color", $rgbArray)
             ];
         } else {
-            // Umwandlung abhängig von RGB/BGR-Modus
             if ($ColorIntIsBGR) {
                 $b = ($intVal >> 16) & 0xFF;
                 $g = ($intVal >> 8) & 0xFF;
